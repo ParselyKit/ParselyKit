@@ -159,16 +159,11 @@ private struct ParselyKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingConta
     }
     
     func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
-        print("배열 컨테이너 요청: \(key.stringValue)")
-        print("사용 가능한 키들: \(xmlData.keys)")
         
         guard let arrayData = xmlData[key.stringValue] as? [Any] else {
-            print("❌ 배열 데이터를 찾을 수 없음: \(key.stringValue)")
-            print("실제 데이터: \(xmlData[key.stringValue] ?? "nil")")
             throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: codingPath, debugDescription: "Key '\(key.stringValue)' not found or not an array"))
         }
         
-        print("✅ 배열 데이터 발견: \(arrayData.count)개 항목")
         return ParselyUnkeyedDecodingContainer(arrayData: arrayData, codingPath: codingPath + [key])
     }
     

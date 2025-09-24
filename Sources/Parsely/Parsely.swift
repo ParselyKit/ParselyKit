@@ -31,7 +31,6 @@ public final class Parsely: Sendable {
         do {
             return try T(from: decoder)
         } catch {
-            print("디코딩 실패: \(error)")
             return nil
         }
     }
@@ -50,7 +49,6 @@ public final class Parsely: Sendable {
             return nil
         }
         
-        print("파싱 결과: \(parserDelegate.parsedData)")
         return parserDelegate.parsedData
     }
 }
@@ -96,10 +94,8 @@ private final class ParselyXMLParserDelegate: NSObject, XMLParserDelegate {
                 if var existingArray = existingValue as? [Any] {
                     existingArray.append(value)
                     parentData[elementName] = existingArray
-                    print("배열에 추가: \(elementName), 총 \(existingArray.count)개")
                 } else {
                     parentData[elementName] = [existingValue, value]
-                    print("배열로 변환: \(elementName)")
                 }
             } else {
                 // 새로운 키
