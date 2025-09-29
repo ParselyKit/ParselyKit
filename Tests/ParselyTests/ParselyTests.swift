@@ -30,6 +30,26 @@ final class ParselyTests: XCTestCase {
         let db: PerformanceDetail
     }
     
+    // MARK: - String 배열 테스트용 모델
+    
+    struct TagsDTO: ParselyType {
+        let tags: Tags
+    }
+    
+    struct Tags: ParselyType {
+        let tag: [String]
+    }
+    
+    struct MovieDTO: ParselyType {
+        let movie: Movie
+    }
+    
+    struct Movie: ParselyType {
+        let title: String
+        let director: String
+        let tags: Tags
+    }
+    
     // MARK: - 테스트
     
     func testFullyAutomaticDecoding() throws {
@@ -74,5 +94,31 @@ final class ParselyTests: XCTestCase {
             XCTAssertEqual(relates.relate[1].relatenm, "NHN티켓링크")
             XCTAssertEqual(relates.relate[1].relateurl, "http://www.ticketlink.co.kr/product/56744")
         }
+    }
+    
+    // MARK: - String 배열 테스트
+    
+    func testStringArrayParsing() {
+        let xml = """
+        <tags>
+            <tag>액션</tag>
+            <tag>스릴러</tag>
+            <tag>범죄</tag>
+            <tag>한국영화</tag>
+        </tags>
+        """
+        
+        print("🔍 테스트 시작: String 배열 파싱")
+        let result = TagsDTO.parse(from: xml)
+        print("🔍 파싱 결과: \(result != nil ? "성공" : "실패")")
+        
+        XCTAssertNotNil(result, "String 배열 파싱이 성공해야 합니다")
+        guard let tagsDTO = result else { return }
+        
+        XCTAssertEqual(tagsDTO.tags.tag.count, 4, "4개의 태그가 파싱되어야 합니다")
+        XCTAssertEqual(tagsDTO.tags.tag[0], "액션")
+        XCTAssertEqual(tagsDTO.tags.tag[1], "스릴러")
+        XCTAssertEqual(tagsDTO.tags.tag[2], "범죄")
+        XCTAssertEqual(tagsDTO.tags.tag[3], "한국영화")
     }
 }

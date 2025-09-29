@@ -201,14 +201,6 @@ private struct ParselyUnkeyedDecodingContainer: UnkeyedDecodingContainer {
     }
     
     mutating func decode(_ type: String.Type) throws -> String {
-        guard !isAtEnd, let value = arrayData[currentIndex] as? String else {
-            throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Expected String"))
-        }
-        currentIndex += 1
-        return value
-    }
-    
-    mutating func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
         guard !isAtEnd else {
             throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
         }
@@ -216,6 +208,59 @@ private struct ParselyUnkeyedDecodingContainer: UnkeyedDecodingContainer {
         let currentData = arrayData[currentIndex]
         currentIndex += 1
         
+        if let stringValue = currentData as? String {
+            return stringValue
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Expected String"))
+    }
+    
+    mutating func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
+        
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        
+        // String 타입인 경우 String으로 직접 변환 시도
+        if T.self == String.self {
+            currentIndex += 1
+            if let stringValue = currentData as? String {
+                return stringValue as! T
+            }
+        }
+        
+        // Int, Bool 등 기본 타입 처리
+        if T.self == Int.self, let stringValue = currentData as? String, let intValue = Int(stringValue) {
+            currentIndex += 1
+            return intValue as! T
+        }
+        
+        if T.self == Bool.self, let stringValue = currentData as? String {
+            currentIndex += 1
+            switch stringValue.lowercased() {
+            case "true", "1", "yes", "y":
+                return true as! T
+            case "false", "0", "no", "n":
+                return false as! T
+            default:
+                break
+            }
+        }
+        
+        if T.self == Double.self, let stringValue = currentData as? String, let doubleValue = Double(stringValue) {
+            currentIndex += 1
+            return doubleValue as! T
+        }
+        
+        if T.self == Float.self, let stringValue = currentData as? String, let floatValue = Float(stringValue) {
+            currentIndex += 1
+            return floatValue as! T
+        }
+        
+        // 구조체인 경우
+        currentIndex += 1
         if let dictData = currentData as? [String: Any] {
             let decoder = ParselyDecoder(xmlData: dictData)
             return try T(from: decoder)
@@ -224,45 +269,207 @@ private struct ParselyUnkeyedDecodingContainer: UnkeyedDecodingContainer {
         throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Expected dictionary for \(type)"))
     }
     
-    // 다른 필수 메서드들 (간단하게 에러 처리)
+    // 기본 타입 디코딩 메서드들
     mutating func decode(_ type: Bool.Type) throws -> Bool {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Bool not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String {
+            switch stringValue.lowercased() {
+            case "true", "1", "yes", "y":
+                return true
+            case "false", "0", "no", "n":
+                return false
+            default:
+                throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert '\(stringValue)' to Bool"))
+            }
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Expected String for Bool conversion"))
     }
+    
     mutating func decode(_ type: Int.Type) throws -> Int {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Int not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let intValue = Int(stringValue) {
+            return intValue
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Int"))
     }
+    
     mutating func decode(_ type: Int8.Type) throws -> Int8 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Int8 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = Int8(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Int8"))
     }
+    
     mutating func decode(_ type: Int16.Type) throws -> Int16 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Int16 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = Int16(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Int16"))
     }
+    
     mutating func decode(_ type: Int32.Type) throws -> Int32 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Int32 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = Int32(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Int32"))
     }
+    
     mutating func decode(_ type: Int64.Type) throws -> Int64 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Int64 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = Int64(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Int64"))
     }
+    
     mutating func decode(_ type: UInt.Type) throws -> UInt {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "UInt not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = UInt(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to UInt"))
     }
+    
     mutating func decode(_ type: UInt8.Type) throws -> UInt8 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "UInt8 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = UInt8(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to UInt8"))
     }
+    
     mutating func decode(_ type: UInt16.Type) throws -> UInt16 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "UInt16 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = UInt16(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to UInt16"))
     }
+    
     mutating func decode(_ type: UInt32.Type) throws -> UInt32 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "UInt32 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = UInt32(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to UInt32"))
     }
+    
     mutating func decode(_ type: UInt64.Type) throws -> UInt64 {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "UInt64 not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = UInt64(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to UInt64"))
     }
+    
     mutating func decode(_ type: Float.Type) throws -> Float {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Float not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = Float(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Float"))
     }
+    
     mutating func decode(_ type: Double.Type) throws -> Double {
-        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Double not supported"))
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Unkeyed container is at end"))
+        }
+        
+        let currentData = arrayData[currentIndex]
+        currentIndex += 1
+        
+        if let stringValue = currentData as? String, let value = Double(stringValue) {
+            return value
+        }
+        
+        throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath, debugDescription: "Cannot convert to Double"))
     }
     
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
