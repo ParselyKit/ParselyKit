@@ -1,10 +1,31 @@
 # Parsely
 
-A simple XML parsing library for Swift
+A lightweight XML parsing library for Swift that automatically converts XML to Swift structs.
 
-## Overview
+## Features
 
-Parsely is a Swift library that makes it easy to convert XML data into Swift structs. No complex configuration needed - just adopt one protocol and you're ready to parse XML.
+- 🚀 **Automatic Parsing**: Just define a struct and adopt `ParselyType` protocol
+- 📦 **Array Support**: Supports both struct arrays and primitive type arrays
+- 🔄 **Nested Structures**: Handles deeply nested XML structures
+- 🎯 **Type Safe**: Leverages Swift's type system
+- 💡 **Simple API**: Clean and intuitive interface
+
+## Installation
+
+### Swift Package Manager
+
+Add the following to your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/yourusername/Parsely.git", from: "1.1.0")
+]
+```
+
+Or add it through Xcode:
+1. File > Add Package Dependencies...
+2. Enter the repository URL
+3. Select version 1.1.0 or later
 
 ## Requirements
 
@@ -12,53 +33,36 @@ Parsely is a Swift library that makes it easy to convert XML data into Swift str
 [![Platforms](https://img.shields.io/badge/Platforms-iOS-orange?style=flat-square)](https://img.shields.io/badge/Platforms-iOS-orange?style=flat-square)
 [![Swift Package Manager](https://img.shields.io/badge/Swift_Package_Manager-compatible-orange?style=flat-square)](https://img.shields.io/badge/Swift_Package_Manager-compatible-orange?style=flat-square)
 
-## Installation
-
-### Swift Package Manager
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/yourusername/Parsely.git", from: "1.0.0")
-]
-```
-
 ## Usage
 
-### 1. Basic Usage
+### Basic Usage
 
 ```swift
 import Parsely
 
-// Define your XML structure
+// 1. Define your struct and adopt ParselyType
 struct Product: ParselyType {
     let id: Int
     let name: String
     let price: Double
     let inStock: Bool
-    let description: String
 }
 
-// Wrapper for the root XML element
-struct ProductDTO: ParselyType {
-    let product: Product
-}
-
-// Parse XML
-let xmlString = """
+// 2. Parse XML string
+let xml = """
 <product>
     <id>12345</id>
-    <name>iPhone 17 PRO</name>
-    <price>1200000.99</price>
+    <name>iPhone 15 Pro</name>
+    <price>999.99</price>
     <inStock>true</inStock>
-    <description>Latest iPhone</description>
 </product>
 """
 
-let result = ProductDTO.parse(from: xmlString)
-print(result?.product.name) // "iPhone 17 PRO"
+let product = Product.parse(from: xml)
+print(product?.name) // "iPhone 15 Pro"
 ```
 
-### 2. Nested Structures
+### Nested Structures
 
 ```swift
 struct Address: ParselyType {
@@ -73,12 +77,7 @@ struct Customer: ParselyType {
     let address: Address
 }
 
-// Root wrapper
-struct CustomerDTO: ParselyType {
-    let customer: Customer
-}
-
-let xmlString = """
+let xml = """
 <customer>
     <name>John Doe</name>
     <email>john@example.com</email>
@@ -90,110 +89,128 @@ let xmlString = """
 </customer>
 """
 
-let result = CustomerDTO.parse(from: xmlString)
-print(result?.customer.name) // "John Doe"
+let customer = Customer.parse(from: xml)
 ```
 
-### 3. Array Handling
+### Array Support
+
+#### Struct Arrays
 
 ```swift
-struct BookItem: ParselyType {
+struct Book: ParselyType {
     let title: String
     let author: String
-    let isbn: String
-}
-
-struct BookList: ParselyType {
-    let books: [BookItem]
 }
 
 struct Library: ParselyType {
     let name: String
-    let bookList: BookList
+    let books: [Book]
 }
 
-// Root wrapper
-struct LibraryDTO: ParselyType {
-    let library: Library
-}
-
-let xmlString = """
+let xml = """
 <library>
-    <name>Central Library</name>
-    <bookList>
-        <books>
+    <name>City Library</name>
+    <books>
+        <book>
             <title>Swift Programming</title>
             <author>Apple Inc.</author>
-            <isbn>978-123456789</isbn>
-        </books>
-        <books>
-            <title>iOS App Development</title>
-            <author>Developer Team</author>
-            <isbn>978-987654321</isbn>
-        </books>
-    </bookList>
+        </book>
+        <book>
+            <title>iOS Development</title>
+            <author>Developer</author>
+        </book>
+    </books>
 </library>
 """
 
-let result = LibraryDTO.parse(from: xmlString)
-print(result?.library.bookList.books.count) // 2
+let library = Library.parse(from: xml)
+print(library?.books.count) // 2
 ```
 
-## Supported Data Types
+#### Primitive Type Arrays (New in v1.1.0!)
 
-### Basic Types (Single Values)
+```swift
+struct Movie: ParselyType {
+    let title: String
+    let director: String
+    let tags: [String]  // ✨ String array support
+}
 
-- String: Text data
-- Int, Int8, Int16, Int32, Int64: Integer types
-- UInt, UInt8, UInt16, UInt32, UInt64: Unsigned integer types
-- Bool: Boolean values (true/false, 1/0, yes/no)
-- Double, Float: Floating-point numbers
-- CGFloat: Core Graphics floating-point numbers
+let xml = """
+<movie>
+    <title>Inception</title>
+    <director>Christopher Nolan</director>
+    <tags>
+        <tag>Sci-Fi</tag>
+        <tag>Thriller</tag>
+        <tag>Action</tag>
+    </tags>
+</movie>
+"""
+
+let movie = Movie.parse(from: xml)
+print(movie?.tags) // ["Sci-Fi", "Thriller", "Action"]
+```
+
+Supported primitive array types:
+- `[String]`, `[Int]`, `[Bool]`, `[Double]`, `[Float]`
+- `[Int8]`, `[Int16]`, `[Int32]`, `[Int64]`
+- `[UInt]`, `[UInt8]`, `[UInt16]`, `[UInt32]`, `[UInt64]`
+
+### Error Handling
+
+```swift
+// Simple usage (returns nil on failure)
+let result = Product.parse(from: xml)
+
+// With error handling
+do {
+    let result = try Product.parseOrThrow(from: xml)
+    print("Success: \(result)")
+} catch let error as ParselyError {
+    print("Error: \(error.localizedDescription)")
+}
+```
+
+## Supported Types
+
+### Primitive Types
+- `String`
+- `Int`, `Int8`, `Int16`, `Int32`, `Int64`
+- `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`
+- `Bool` (supports: "true"/"false", "1"/"0", "yes"/"no", "y"/"n")
+- `Double`, `Float`
 
 ### Complex Types
+- Nested structs
+- Arrays of structs
+- Arrays of primitive types (v1.1.0+)
+- Optional values
 
-- Custom Structs: Any struct that adopts ParselyType
-- Nested Structures: Structs containing other structs
-- Arrays of Custom Structs: [YourStruct] where YourStruct: ParselyType
+## How It Works
 
-### Currently NOT Supported
+1. **XML Parsing**: Uses Foundation's `XMLParser` to convert XML into a dictionary structure
+2. **Type Mapping**: Automatically maps XML element names to struct property names
+3. **Type Conversion**: Converts string values to appropriate Swift types
+4. **Array Detection**: Automatically detects and converts repeated elements into arrays
 
-- ❌ Arrays of basic types: [Int], [String], [Bool], etc.
-- ❌ XML attributes
-- ❌ Mixed content (text + elements)
+## Important Notes
 
-### Features
+- XML element names must **exactly match** struct property names (case-sensitive)
+- All struct properties must be present in the XML (or marked as optional)
+- XML attributes are not currently supported (coming soon!)
 
-- ✅ Simple protocol adoption
-- ✅ Automatic type conversion for basic types
-- ✅ Nested structure support
-- ✅ Arrays of custom structs
-- ✅ Multiple boolean format support
-- ✅ Automatic whitespace trimming
-- ⚠️ Arrays of basic types coming in v1.1
+## Roadmap
 
-### Key Points
-
-- Root Element: Always create a wrapper struct for the root XML element
-- Property Names: Swift property names must match XML tag names exactly
-- Type Safety: Automatic conversion with Swift's type system
-- Custom Structs Only: Arrays currently support only custom structs, not basic types
-- Error Handling: Returns nil if parsing fails
-
-## Examples
-
-For more examples, please refer to the test files in the repository.
-
-## Testing
-
-```bash
-swift test
-```
+- [ ] XML attribute support
+- [ ] Custom key mapping (CodingKeys)
+- [ ] Date parsing support
+- [ ] Performance optimizations
 
 ## License
 
-MIT License. See [LICENSE](https://github.com/ParselyKit/ParselyKit/blob/main/LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contributing
 
-Issues and pull requests are welcome!
+Contributions are welcome! Please feel free to submit a Pull Request.
