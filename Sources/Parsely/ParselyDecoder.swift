@@ -139,8 +139,15 @@ private struct ParselyKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingConta
         // 배열 자동 처리
         let typeName = String(describing: type)
         if typeName.hasPrefix("Array<") || typeName.contains("[") {
+            // 배열 데이터가 있는 경우
             if let arrayData = xmlData[key.stringValue] as? [Any] {
                 let arrayContainer = ParselyUnkeyedDecodingContainer(arrayData: arrayData, codingPath: codingPath + [key])
+                let arrayDecoder = ParselyArrayDecoder(container: arrayContainer)
+                return try T(from: arrayDecoder)
+            }
+            // 단일 값인 경우 배열로 감싸기
+            else if let singleValue = xmlData[key.stringValue] {
+                let arrayContainer = ParselyUnkeyedDecodingContainer(arrayData: [singleValue], codingPath: codingPath + [key])
                 let arrayDecoder = ParselyArrayDecoder(container: arrayContainer)
                 return try T(from: arrayDecoder)
             }
