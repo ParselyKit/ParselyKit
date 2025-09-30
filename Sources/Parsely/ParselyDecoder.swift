@@ -130,22 +130,23 @@ private struct ParselyKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingConta
     }
     
     func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T : Decodable {
-        // 중첩된 구조체 처리
-        if let nestedData = xmlData[key.stringValue] as? [String: Any] {
-            let nestedDecoder = ParselyDecoder(xmlData: nestedData)
-            return try T(from: nestedDecoder)
-        }
-        
-        // 배열 자동 처리
+        // 배열 자동 처리 (먼저 체크!)
         let typeName = String(describing: type)
         if typeName.hasPrefix("Array<") || typeName.contains("[") {
+            
             // 배열 데이터가 있는 경우
             if let arrayData = xmlData[key.stringValue] as? [Any] {
                 let arrayContainer = ParselyUnkeyedDecodingContainer(arrayData: arrayData, codingPath: codingPath + [key])
                 let arrayDecoder = ParselyArrayDecoder(container: arrayContainer)
                 return try T(from: arrayDecoder)
             }
-            // 단일 값인 경우 배열로 감싸기
+            // 단일 Dictionary 값인 경우 배열로 감싸기
+            else if let singleDict = xmlData[key.stringValue] as? [String: Any] {
+                let arrayContainer = ParselyUnkeyedDecodingContainer(arrayData: [singleDict], codingPath: codingPath + [key])
+                let arrayDecoder = ParselyArrayDecoder(container: arrayContainer)
+                return try T(from: arrayDecoder)
+            }
+            // 단일 String 같은 primitive 값인 경우 배열로 감싸기
             else if let singleValue = xmlData[key.stringValue] {
                 let arrayContainer = ParselyUnkeyedDecodingContainer(arrayData: [singleValue], codingPath: codingPath + [key])
                 let arrayDecoder = ParselyArrayDecoder(container: arrayContainer)
@@ -153,6 +154,11 @@ private struct ParselyKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingConta
             }
         }
         
+        // 중첩된 구조체 처리 (배열이 아닐 때만!)
+        if let nestedData = xmlData[key.stringValue] as? [String: Any] {
+            let nestedDecoder = ParselyDecoder(xmlData: nestedData)
+            return try T(from: nestedDecoder)
+        }
         throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: codingPath, debugDescription: "Key '\(key.stringValue)' not found"))
     }
     
